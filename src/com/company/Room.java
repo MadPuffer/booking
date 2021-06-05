@@ -1,0 +1,86 @@
+package com.company;
+
+import java.io.Serializable;
+
+public class Room implements Serializable {
+    private int id;
+    private int price;
+    private int capacity;
+    private RoomType roomType;
+    private boolean isBooked = false;
+    private String name;
+
+    public Room(int id, RoomType roomType) {
+        this.id = id;
+        this.roomType = roomType;
+
+        switch (roomType) {
+            case SINGLE:
+                this.capacity = 1;
+                this.price = 1500;
+                this.name = "Одноместный номер";
+                break;
+            case DOUBLE:
+                this.capacity = 2;
+                this.price = 2500;
+                this.name = "Двухместный номер";
+                break;
+            case WITHBABY:
+                this.capacity = 3;
+                this.price = 3300;
+                this.name = "Двухместный номер + ребенок";
+                break;
+            case GENERAL:
+                this.capacity = 6;
+                this.price = 500;
+                this.name = "Общий номер";
+                break;
+        }
+    }
+
+    @Override
+    public String toString() {
+        return String.format("%s:\n -Номер комнаты: %d\n -Цена: %dр.\n -Вместимость: %d человек(а)", this.name,
+                this.id + 1, this.price, this.capacity);
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public boolean isBooked() {
+        return isBooked;
+    }
+
+    public void setBooked(boolean booked) {
+        isBooked = booked;
+    }
+
+    public int getPrice() {
+        return price;
+    }
+
+    public void setPrice(int price) {
+        this.price = price;
+    }
+
+    public int getCapacity() {
+        return capacity;
+    }
+
+    public void setCapacity(int capacity) {
+        this.capacity = capacity;
+    }
+
+    public RoomType getRoomType() {
+        return roomType;
+    }
+
+    public void setRoomType(RoomType roomType) {
+        this.roomType = roomType;
+    }
+}
