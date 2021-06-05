@@ -1,6 +1,10 @@
 package com.company;
 
 import java.io.*;
+import java.time.LocalDate;
+import java.time.Period;
+import java.time.temporal.ChronoField;
+import java.time.temporal.TemporalUnit;
 import java.util.ArrayList;
 import java.util.Scanner;
 
@@ -8,6 +12,7 @@ public class Main {
 
     public static void main(String[] args) throws IOException, ClassNotFoundException {
         Scanner scanner = new Scanner(System.in);
+
         while (true) {
 
             ArrayList<Client> clientsList = readClientsFromFile("clients.txt");
@@ -128,6 +133,15 @@ public class Main {
             }
         }
 
+        LocalDate[] date = askForValidDate();
+
+        LocalDate bookedDate = date[0];
+        LocalDate exitRoomDate = date[1];
+        Period p = Period.between(bookedDate, exitRoomDate);
+        System.out.println(p.getDays());
+//        System.out.println(exitRoomDate.getDayOfMonth() - bookedDate.getDayOfMonth());
+
+
         switch (room.getRoomType()) {
             case SINGLE:
                 if (client.getBalance() >= room.getPrice()) {
@@ -209,7 +223,52 @@ public class Main {
                     }
                 }
                 break;
+            case GENERAL:
+                if (client.getBalance() >= room.getPrice()) {
+                    if (room.getLivingClientsCount() < 6) {
+                        System.out.println("Место в комнате забронировано на ваше имя.");
+                        room.setLivingClientsCount(room.getLivingClientsCount() + 1);
+                        if (room.getLivingClientsCount() == 6) {
+                            room.setBooked(true);
+                            client.bookRoom(room);
+                            availableRooms.remove(room);
+                            availableRoomNums.remove(roomNum);
+                            bookedRooms.add(room);
+                            writeBookedRooms("bookedRooms.txt", bookedRooms);
+                            writeAvailableRooms("availableRooms.txt", availableRooms);
+                        }
+                    } else {
+                        System.out.println("Все места в этой комнате уже заняты");
+                    }
+
+                } else {
+                    System.out.println("Сожалеем, но у вас недостаточно средств для бронирования данной комнаты." +
+                            "\nХотите посмотреть другую комнату?");
+                    System.out.println("  * Введите да или нет");
+                    switch (chooseLookForAnotherRoom(scanner.nextLine())) {
+                        case "да":
+                            chooseRoom(client);
+                            break;
+                        case "нет":
+                            System.out.println("Удачного дня!");
+                            break;
+                    }
+                }
         }
+    }
+
+    static LocalDate[] askForValidDate() {
+        Scanner validDateScanner = new Scanner(System.in);
+        System.out.print("Введите номер месяца брони: ");
+        int bookedMonth = validDateScanner.nextInt();
+        System.out.print("Введите номер дня брони: ");
+        int bookedDay = validDateScanner.nextInt();
+        System.out.print("Введите номер месяца выезда: ");
+        int exitRoomMonth = validDateScanner.nextInt();
+        System.out.print("Введите номер дня выезда: ");
+        int exitRoomDay = validDateScanner.nextInt();
+        return new LocalDate[] {LocalDate.of(2021, bookedMonth, bookedDay),
+        LocalDate.of(2021, exitRoomMonth, exitRoomDay)};
     }
 
     static void registerPerson() {

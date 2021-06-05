@@ -9,6 +9,7 @@ public class Room implements Serializable {
     private RoomType roomType;
     private boolean isBooked = false;
     private String name;
+    private int livingClientsCount;
 
     public Room(int id, RoomType roomType) {
         this.id = id;
@@ -42,6 +43,22 @@ public class Room implements Serializable {
     public String toString() {
         return String.format("%s:\n -Номер комнаты: %d\n -Цена: %dр.\n -Вместимость: %d человек(а)", this.name,
                 this.id + 1, this.price, this.capacity);
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public int getLivingClientsCount() {
+        return livingClientsCount;
+    }
+
+    public void setLivingClientsCount(int livingClientsCount) {
+        this.livingClientsCount = livingClientsCount;
     }
 
     public int getId() {

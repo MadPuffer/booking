@@ -12,6 +12,7 @@ public class Client implements Serializable {
     private int balance;
     private ArrayList<Integer> bookedRoomsIds = new ArrayList<Integer>();
 
+
     public Client(String surname, String name, String lastname, int age, Passport passport, int balance) {
         this.surname = surname;
         this.name = name;
