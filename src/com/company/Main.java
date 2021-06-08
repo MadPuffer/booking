@@ -2,9 +2,8 @@ package com.company;
 
 import java.io.*;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.Period;
-import java.time.temporal.ChronoField;
-import java.time.temporal.TemporalUnit;
 import java.util.ArrayList;
 import java.util.Scanner;
 
@@ -14,16 +13,18 @@ public class Main {
         Scanner scanner = new Scanner(System.in);
 
         while (true) {
-
+            LocalDate currentDate = nextDay();
             ArrayList<Client> clientsList = readClientsFromFile("clients.txt");
-            ArrayList<Room> bookedRooms = null;
+            ArrayList<Room> bookedRooms = readBookedRooms("bookedRooms.txt");
+
+            bookedRooms.removeIf(bookedRoom -> bookedRoom.getExitDate().equals(currentDate));
+            writeBookedRooms("bookedRooms.txt", bookedRooms);
 
             System.out.println("Добро пожаловать в отель!");
-            System.out.print("Вы хотите забронировать новый номер или отменить бронь?\n" +
-                    "   * Введите 'забронировать' или 'отменить': ");
-            switch (chooseWhatToDo(scanner.nextLine())) {
+            System.out.print("Вы хотите забронировать новый номер или найти свою бронь?\n" +
+                    "   * Введите 'забронировать' или 'найти': ");
+            switch (chooseWhatToDo("забронировать", "найти")) {
                 case "забронировать":
-
                     System.out.println("Отлично! Нам потребуется некоторые данные о вас.");
 
                     System.out.print("Введите вашу фамилию: ");
@@ -57,7 +58,7 @@ public class Main {
                         Client client = new Client(surname, name, lastname, age, new Passport(num, series, surname,
                                 name, lastname), balance);
 
-                        chooseRoom(client);
+                        checkOut(client);
 
                         clientsList.add(client);
                         writeClientsInFile(clientsList, "clients.txt");
@@ -66,8 +67,8 @@ public class Main {
                         System.out.println("Сожалеем, но вы не можете забронировать номер в силу своего возраста.");
                     }
                     break;
-                case "отменить":
-                    System.out.println(2);
+                case "найти":
+                    findBookedRoomsByClient();
                     break;
 
                 default:
@@ -76,7 +77,8 @@ public class Main {
         }
 
     }
-     // создание хостела, вызывается при пересоздании отеля по желанию разраба
+
+    // создание хостела, вызывается при пересоздании отеля по желанию разраба
     static void createHostel(String filename) {
         ObjectOutputStream objectOutputStream = null;
         ArrayList<Room> rooms = new ArrayList<Room>();
@@ -107,15 +109,15 @@ public class Main {
     }
 
     // выбор комнаты клиентом
-    static void chooseRoom(Client client) throws IOException {
+    static void checkOut(Client client) throws IOException {
         Scanner scanner = new Scanner(System.in);
 
-        ArrayList<Room> availableRooms = findAvailableRooms("existingRooms.txt",
-                "availableRooms.txt");
-        ArrayList<Integer> availableRoomNums = new ArrayList<Integer>();
+        ArrayList<Room> availableRooms = findAvailableRooms();
+//        ArrayList<Room> availableRooms = readBookedRooms("existingRooms.txt");
+        ArrayList<Integer> availableRoomNums = new ArrayList<>();
         ArrayList<Room> bookedRooms = readBookedRooms("bookedRooms.txt");
-
         System.out.println("Доступные комнаты: ");
+        System.out.println(availableRooms.size());
         for (Room room : availableRooms) {
             availableRoomNums.add(room.getId() + 1);
             System.out.println(room.toString());
@@ -137,29 +139,27 @@ public class Main {
 
         LocalDate bookedDate = date[0];
         LocalDate exitRoomDate = date[1];
-        Period p = Period.between(bookedDate, exitRoomDate);
-        System.out.println(p.getDays());
-//        System.out.println(exitRoomDate.getDayOfMonth() - bookedDate.getDayOfMonth());
-
-
+        int days = Period.between(bookedDate, exitRoomDate).getDays();
         switch (room.getRoomType()) {
             case SINGLE:
-                if (client.getBalance() >= room.getPrice()) {
+                if (client.getBalance() >= room.getPrice() * days) {
                     System.out.println("Комната забронирована на ваше имя!");
-                    client.bookRoom(room);
+
+                    room.setExitDate(exitRoomDate);
+                    client.bookRoom(room, days);
                     availableRooms.remove(room);
                     availableRoomNums.remove(roomNum);
                     bookedRooms.add(room);
-                    writeBookedRooms("bookedRooms.txt", bookedRooms);
-                    writeAvailableRooms("availableRooms.txt", availableRooms);
 
-                }  else {
+                    writeBookedRooms("bookedRooms.txt", bookedRooms);
+
+                } else {
                     System.out.println("Сожалеем, но у вас недостаточно средств для бронирования данной комнаты." +
                             "\nХотите посмотреть другую комнату?");
                     System.out.println("  * Введите да или нет");
                     switch (chooseLookForAnotherRoom(scanner.nextLine())) {
                         case "да":
-                            chooseRoom(client);
+                            checkOut(client);
                             break;
                         case "нет":
                             System.out.println("Удачного дня!");
@@ -168,25 +168,24 @@ public class Main {
                 }
                 break;
             case DOUBLE:
-                if (client.getBalance() >= room.getPrice()) {
+                if (client.getBalance() >= room.getPrice() * days) {
                     System.out.println("Введите данные человека, с которым собираетесь проживать.");
                     registerPerson();
                     System.out.println("Комната забронирована на ваше имя!");
 
-                    client.bookRoom(room);
+                    client.bookRoom(room, days);
                     availableRooms.remove(room);
                     availableRoomNums.remove(roomNum);
                     bookedRooms.add(room);
                     writeBookedRooms("bookedRooms.txt", bookedRooms);
-                    writeAvailableRooms("availableRooms.txt", availableRooms);
 
-                }  else {
+                } else {
                     System.out.println("Сожалеем, но у вас недостаточно средств для бронирования данной комнаты." +
                             "\nХотите посмотреть другую комнату?");
                     System.out.println("  * Введите да или нет");
                     switch (chooseLookForAnotherRoom(scanner.nextLine())) {
                         case "да":
-                            chooseRoom(client);
+                            checkOut(client);
                             break;
                         case "нет":
                             System.out.println("Удачного дня!");
@@ -195,27 +194,26 @@ public class Main {
                 }
                 break;
             case WITHBABY:
-                if (client.getBalance() >= room.getPrice()) {
+                if (client.getBalance() >= room.getPrice() * days) {
                     System.out.println("Введите данные человека, с которым собираетесь проживать.");
                     registerPerson();
                     System.out.println("Введите данные ребенка: ");
                     registerPerson();
                     System.out.println("Комната забронирована на ваше имя!");
 
-                    client.bookRoom(room);
+                    client.bookRoom(room, days);
                     availableRooms.remove(room);
                     availableRoomNums.remove(roomNum);
                     bookedRooms.add(room);
                     writeBookedRooms("bookedRooms.txt", bookedRooms);
-                    writeAvailableRooms("availableRooms.txt", availableRooms);
 
-                }  else {
+                } else {
                     System.out.println("Сожалеем, но у вас недостаточно средств для бронирования данной комнаты." +
                             "\nХотите посмотреть другую комнату?");
                     System.out.println("  * Введите да или нет");
                     switch (chooseLookForAnotherRoom(scanner.nextLine())) {
                         case "да":
-                            chooseRoom(client);
+                            checkOut(client);
                             break;
                         case "нет":
                             System.out.println("Удачного дня!");
@@ -224,18 +222,17 @@ public class Main {
                 }
                 break;
             case GENERAL:
-                if (client.getBalance() >= room.getPrice()) {
+                if (client.getBalance() >= room.getPrice() * days) {
                     if (room.getLivingClientsCount() < 6) {
                         System.out.println("Место в комнате забронировано на ваше имя.");
                         room.setLivingClientsCount(room.getLivingClientsCount() + 1);
                         if (room.getLivingClientsCount() == 6) {
                             room.setBooked(true);
-                            client.bookRoom(room);
+                            client.bookRoom(room, days);
                             availableRooms.remove(room);
                             availableRoomNums.remove(roomNum);
                             bookedRooms.add(room);
                             writeBookedRooms("bookedRooms.txt", bookedRooms);
-                            writeAvailableRooms("availableRooms.txt", availableRooms);
                         }
                     } else {
                         System.out.println("Все места в этой комнате уже заняты");
@@ -247,7 +244,7 @@ public class Main {
                     System.out.println("  * Введите да или нет");
                     switch (chooseLookForAnotherRoom(scanner.nextLine())) {
                         case "да":
-                            chooseRoom(client);
+                            checkOut(client);
                             break;
                         case "нет":
                             System.out.println("Удачного дня!");
@@ -255,6 +252,84 @@ public class Main {
                     }
                 }
         }
+    }
+
+    static LocalDate nextDay() throws IOException {
+        ObjectInputStream objectInputStream = null;
+        ObjectOutputStream objectOutputStream = null;
+
+        try {
+            objectInputStream = new ObjectInputStream(new FileInputStream("data/currentDateInfo.txt"));
+            LocalDate currentDate = (LocalDate) objectInputStream.readObject();
+
+            objectOutputStream = new ObjectOutputStream(new FileOutputStream("data/currentDateInfo.txt"));
+            objectOutputStream.writeObject(currentDate.plusDays(1));
+
+            return currentDate.plusDays(1);
+
+        } catch (EOFException e) {
+            objectOutputStream = new ObjectOutputStream(new FileOutputStream("data/currentDateInfo.txt"));
+            objectOutputStream.writeObject(LocalDate.of(2021, 1, 1));
+
+        } catch (IOException | ClassNotFoundException fileNotFoundException) {
+            fileNotFoundException.printStackTrace();
+        } finally {
+            if (objectInputStream != null) {
+                objectInputStream.close();
+            }
+            if (objectOutputStream != null) {
+                objectOutputStream.close();
+            }
+        }
+
+        return LocalDate.of(2021, 6, 1);
+    }
+
+    static void findBookedRoomsByClient() throws IOException, ClassNotFoundException {
+        Scanner sc = new Scanner(System.in);
+        System.out.print("Введите вашу фамилию: ");
+        String surname = sc.nextLine();
+        System.out.print("Введите номер вашего паспорта: ");
+        int num = askForValidIntData();
+        for (Client client : readClientsFromFile("clients.txt")) {
+            if (client.getSurname().equals(surname) && client.getPassport().getNumber() == num) {
+
+                ArrayList<Room> bookedRoomsByClient = client.getBookedRooms();
+                ArrayList<Room> bookedRooms = readBookedRooms("bookedRooms.txt");
+                ArrayList<Integer> bookedRoomsNums = new ArrayList<Integer>();
+
+                for (Room bookedRoom : bookedRoomsByClient) {
+                    System.out.printf("Номер комнаты: %d\n" +
+                            "тип комнаты: %s\n", bookedRoom.getId() + 1, bookedRoom.getName());
+                    bookedRoomsNums.add(bookedRoom.getId() + 1);
+                }
+
+                System.out.println("Вы хотите продлить бронь или отменить его?\n" +
+                        "   * введите 'продлить' или 'отменить'");
+
+                switch (chooseWhatToDo("продлить", "отменить")) {
+                    case "отменить":
+                        System.out.print("Введите номер комнаты, бронь которой вы хотите отменить: ");
+                        int roomNum = askForValidRoomNum(bookedRoomsNums);
+                        for (Room room : bookedRoomsByClient) {
+                            if (room.getId() == roomNum - 1) {
+                                bookedRooms.remove(room);
+                                writeLog(String.format("%s отменил бронь на комнату номер %d", client.getName(), room.getId() + 1));
+                                client.setBookedRooms(bookedRoomsByClient);
+                            }
+                        }
+                        writeBookedRooms("bookedRooms.txt", bookedRooms);
+                        return;
+                    case "продлить":
+                        break;
+                }
+
+
+                writeBookedRooms("bookedRooms", bookedRooms);
+                return;
+            }
+        }
+        System.out.println("Брони на ваше имя не найдено!");
     }
 
     static LocalDate[] askForValidDate() {
@@ -267,8 +342,8 @@ public class Main {
         int exitRoomMonth = validDateScanner.nextInt();
         System.out.print("Введите номер дня выезда: ");
         int exitRoomDay = validDateScanner.nextInt();
-        return new LocalDate[] {LocalDate.of(2021, bookedMonth, bookedDay),
-        LocalDate.of(2021, exitRoomMonth, exitRoomDay)};
+        return new LocalDate[]{LocalDate.of(2021, bookedMonth, bookedDay),
+                LocalDate.of(2021, exitRoomMonth, exitRoomDay)};
     }
 
     static void registerPerson() {
@@ -316,7 +391,8 @@ public class Main {
             objectInputStream = new ObjectInputStream(new FileInputStream(String.format("data/%s", filename)));
             bookedRooms = (ArrayList<Room>) objectInputStream.readObject();
         } catch (FileNotFoundException fileNotFoundException) {
-            fileNotFoundException.printStackTrace();
+            System.out.println("Файл не найден");
+
         } catch (EOFException e) {
 
         } catch (IOException e) {
@@ -327,73 +403,26 @@ public class Main {
         return bookedRooms;
     }
 
-    static void writeAvailableRooms(String fileName, ArrayList<Room> availableRooms) {
-        ObjectOutputStream objectOutputStream = null;
-        try {
-            objectOutputStream = new ObjectOutputStream(new FileOutputStream(String.format("data/%s", fileName)));
-            objectOutputStream.writeObject(availableRooms);
-        } catch (FileNotFoundException fileNotFoundException) {
-            fileNotFoundException.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
 
     // поиск свободных комнат
-    static ArrayList<Room> findAvailableRooms(String inputFileName, String outputFileName) throws IOException {
-        ObjectInputStream objectInputStream = null;
-        ObjectOutputStream objectOutputStream = null;
-
-        ArrayList<Room> availableRooms = new ArrayList<Room>();
-
-        try {
-            objectInputStream = new ObjectInputStream(new FileInputStream(String.format("data/%s", inputFileName)));
-
-            ArrayList<Room> allRooms = (ArrayList<Room>) objectInputStream.readObject();
-            objectInputStream.close();
-
-            try {
-                objectInputStream = new ObjectInputStream(new FileInputStream(String.format("data/%s", outputFileName)));
-                availableRooms = (ArrayList<Room>) objectInputStream.readObject();
-            } catch (EOFException e) {
-
-            }
-
-
-            for (Room room : allRooms) {
-                if (room.isBooked()) {
-                    availableRooms.remove(room);
-                }
-            }
-
-            objectOutputStream = new ObjectOutputStream(new FileOutputStream(String.format("data/%s", outputFileName)));
-            objectOutputStream.writeObject(availableRooms);
-
-        } catch (IOException | ClassNotFoundException fileNotFoundException) {
-            fileNotFoundException.printStackTrace();
-        } finally {
-            if (objectInputStream != null) {
-                objectInputStream.close();
-            }
-            if (objectOutputStream != null) {
-                objectOutputStream.close();
-            }
+    static ArrayList<Room> findAvailableRooms() {
+        ArrayList<Room> allRooms = readBookedRooms("existingRooms.txt");
+        ArrayList<Room> bookedRooms = readBookedRooms("bookedRooms.txt");
+        for (Room room : allRooms) {
         }
-        return availableRooms;
+        return allRooms;
     }
 
     // рекурсивная функция выбора первичного действия
-    static String chooseWhatToDo(String input) {
+    static String chooseWhatToDo(String v1, String v2) {
         Scanner scanner = new Scanner(System.in);
+        String input = scanner.nextLine();
 
-        switch (input.toLowerCase()) {
-            case "забронировать":
-            case "отменить":
-                return input.toLowerCase();
-            default:
-                System.out.print("Некорректный ответ, введите новый: ");
-                return chooseWhatToDo(scanner.nextLine());
-
+        if (input.toLowerCase().equals(v1) || input.toLowerCase().equals(v2)) {
+            return input;
+        } else {
+            System.out.print("Некорректный ответ, введите новый: ");
+            return chooseWhatToDo(v1, v2);
         }
     }
 
@@ -466,8 +495,7 @@ public class Main {
             System.out.println("Файл не найден");
         } catch (EOFException e) {
 
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             e.printStackTrace();
         } finally {
             if (objectInputStream != null) {
@@ -478,5 +506,33 @@ public class Main {
 
         return arrayList;
 
+    }
+
+    static void writeLog(String message) throws IOException {
+        
+        PrintWriter pw = null;
+        BufferedReader br = null;
+        try {
+            br = new BufferedReader(new FileReader("data/logs.txt"));
+            String data = "";
+            String temp;
+            while ((temp = br.readLine()) != null) {
+                data += temp + "\n";
+            }
+            pw = new PrintWriter("data/logs.txt");
+            pw.println(String.format("%s[ %s ] %s", data, LocalDateTime.now().toString(), message));
+        } catch (FileNotFoundException fnfe) {
+            pw = new PrintWriter("data/logs.txt");
+            pw.println(String.format("[ %s ] %s", LocalDateTime.now(), message));
+            pw.flush();
+        } finally {
+            if (pw != null) {
+                pw.close();
+            }
+
+            if (br != null) {
+                br.close();
+            }
+        }
     }
 }

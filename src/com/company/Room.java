@@ -1,6 +1,7 @@
 package com.company;
 
 import java.io.Serializable;
+import java.time.LocalDate;
 
 public class Room implements Serializable {
     private int id;
@@ -10,6 +11,7 @@ public class Room implements Serializable {
     private boolean isBooked = false;
     private String name;
     private int livingClientsCount;
+    private LocalDate exitDate;
 
     public Room(int id, RoomType roomType) {
         this.id = id;
@@ -43,6 +45,14 @@ public class Room implements Serializable {
     public String toString() {
         return String.format("%s:\n -Номер комнаты: %d\n -Цена: %dр.\n -Вместимость: %d человек(а)", this.name,
                 this.id + 1, this.price, this.capacity);
+    }
+
+    public LocalDate getExitDate() {
+        return exitDate;
+    }
+
+    public void setExitDate(LocalDate exitDate) {
+        this.exitDate = exitDate;
     }
 
     public String getName() {

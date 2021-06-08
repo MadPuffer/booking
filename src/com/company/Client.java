@@ -1,7 +1,10 @@
 package com.company;
 
-import java.io.Serializable;
+import java.io.*;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Date;
 
 public class Client implements Serializable {
     private String surname;
@@ -10,7 +13,7 @@ public class Client implements Serializable {
     private int age;
     private Passport passport;
     private int balance;
-    private ArrayList<Integer> bookedRoomsIds = new ArrayList<Integer>();
+    private ArrayList<Room> bookedRooms = new ArrayList<Room>();
 
 
     public Client(String surname, String name, String lastname, int age, Passport passport, int balance) {
@@ -27,13 +30,21 @@ public class Client implements Serializable {
         this.name = name;
         this.lastname = lastname;
         this.age = age;
-        this.passport = passport;
         this.balance = balance;
     }
 
-    public void bookRoom(Room room) {
-        this.setBalance(this.getBalance() - room.getPrice());
-        this.bookedRoomsIds.add(room.getId());
+    public void bookRoom(Room room, int koef) throws IOException {
+        Main.writeLog(String.format("%s оплатил комнату на счет %d руб.", this.name, room.getPrice() * koef));
+        this.setBalance(this.getBalance() - (room.getPrice() * koef));
+        this.bookedRooms.add(room);
+    }
+
+    public ArrayList<Room> getBookedRooms() {
+        return bookedRooms;
+    }
+
+    public void setBookedRooms(ArrayList<Room> bookedRooms) {
+        this.bookedRooms = bookedRooms;
     }
 
     public String getSurname() {
