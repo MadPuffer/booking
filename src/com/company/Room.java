@@ -12,6 +12,7 @@ public class Room implements Serializable {
     private String name;
     private int livingClientsCount;
     private LocalDate exitDate;
+    private LocalDate enteringDate;
 
     public Room(int id, RoomType roomType) {
         this.id = id;
@@ -45,6 +46,14 @@ public class Room implements Serializable {
     public String toString() {
         return String.format("%s:\n -Номер комнаты: %d\n -Цена: %dр.\n -Вместимость: %d человек(а)", this.name,
                 this.id + 1, this.price, this.capacity);
+    }
+
+    public LocalDate getEnteringDate() {
+        return enteringDate;
+    }
+
+    public void setEnteringDate(LocalDate enteringDate) {
+        this.enteringDate = enteringDate;
     }
 
     public LocalDate getExitDate() {

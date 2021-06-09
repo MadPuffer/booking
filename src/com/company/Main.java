@@ -1,5 +1,7 @@
 package com.company;
 
+import org.w3c.dom.ls.LSOutput;
+
 import java.io.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -11,14 +13,15 @@ public class Main {
 
     public static void main(String[] args) throws IOException, ClassNotFoundException {
         Scanner scanner = new Scanner(System.in);
+        createHostel("existingRooms.txt");
 
         while (true) {
             LocalDate currentDate = nextDay();
             ArrayList<Client> clientsList = readClientsFromFile("clients.txt");
-            ArrayList<Room> bookedRooms = readBookedRooms("bookedRooms.txt");
+            ArrayList<Room> bookedRooms = readBookedRooms("actualBooking.txt");
 
             bookedRooms.removeIf(bookedRoom -> bookedRoom.getExitDate().equals(currentDate));
-            writeBookedRooms("bookedRooms.txt", bookedRooms);
+            writeBookedRooms("actualBooking.txt", bookedRooms);
 
             System.out.println("Добро пожаловать в отель!");
             System.out.print("Вы хотите забронировать новый номер или найти свою бронь?\n" +
@@ -68,7 +71,7 @@ public class Main {
                     }
                     break;
                 case "найти":
-                    findBookedRoomsByClient();
+                    findBookedRoomsByClient(currentDate);
                     break;
 
                 default:
@@ -112,15 +115,26 @@ public class Main {
     static void checkOut(Client client) throws IOException {
         Scanner scanner = new Scanner(System.in);
 
-        ArrayList<Room> availableRooms = findAvailableRooms();
-//        ArrayList<Room> availableRooms = readBookedRooms("existingRooms.txt");
+//        ArrayList<Room> availableRooms = findAvailableRooms();
+        ArrayList<Room> availableRooms = readBookedRooms("existingRooms.txt");
         ArrayList<Integer> availableRoomNums = new ArrayList<>();
-        ArrayList<Room> bookedRooms = readBookedRooms("bookedRooms.txt");
+        ArrayList<Room> bookedRooms = readBookedRooms("actualBooking.txt");
         System.out.println("Доступные комнаты: ");
         System.out.println(availableRooms.size());
         for (Room room : availableRooms) {
-            availableRoomNums.add(room.getId() + 1);
-            System.out.println(room.toString());
+            boolean flag = true;
+            for (Room bookedRoom : bookedRooms) {
+                if (room.getId() == bookedRoom.getId()) {
+                    flag = false;
+                }
+            }
+
+            if (flag) {
+                availableRoomNums.add(room.getId() + 1);
+                System.out.println(room.toString());
+            } else {
+                continue;
+            }
         }
 
 
@@ -135,6 +149,8 @@ public class Main {
             }
         }
 
+        room.setBooked(true);
+
         LocalDate[] date = askForValidDate();
 
         LocalDate bookedDate = date[0];
@@ -144,6 +160,7 @@ public class Main {
             case SINGLE:
                 if (client.getBalance() >= room.getPrice() * days) {
                     System.out.println("Комната забронирована на ваше имя!");
+                    formCheck(room.getPrice() * days, client);
 
                     room.setExitDate(exitRoomDate);
                     client.bookRoom(room, days);
@@ -151,7 +168,7 @@ public class Main {
                     availableRoomNums.remove(roomNum);
                     bookedRooms.add(room);
 
-                    writeBookedRooms("bookedRooms.txt", bookedRooms);
+                    writeBookedRooms("actualBooking.txt", bookedRooms);
 
                 } else {
                     System.out.println("Сожалеем, но у вас недостаточно средств для бронирования данной комнаты." +
@@ -172,12 +189,13 @@ public class Main {
                     System.out.println("Введите данные человека, с которым собираетесь проживать.");
                     registerPerson();
                     System.out.println("Комната забронирована на ваше имя!");
+                    formCheck(room.getPrice() * days, client);
 
                     client.bookRoom(room, days);
                     availableRooms.remove(room);
                     availableRoomNums.remove(roomNum);
                     bookedRooms.add(room);
-                    writeBookedRooms("bookedRooms.txt", bookedRooms);
+                    writeBookedRooms("actualBooking.txt", bookedRooms);
 
                 } else {
                     System.out.println("Сожалеем, но у вас недостаточно средств для бронирования данной комнаты." +
@@ -200,12 +218,13 @@ public class Main {
                     System.out.println("Введите данные ребенка: ");
                     registerPerson();
                     System.out.println("Комната забронирована на ваше имя!");
+                    formCheck(room.getPrice() * days, client);
 
                     client.bookRoom(room, days);
                     availableRooms.remove(room);
                     availableRoomNums.remove(roomNum);
                     bookedRooms.add(room);
-                    writeBookedRooms("bookedRooms.txt", bookedRooms);
+                    writeBookedRooms("actualBooking.txt", bookedRooms);
 
                 } else {
                     System.out.println("Сожалеем, но у вас недостаточно средств для бронирования данной комнаты." +
@@ -225,6 +244,7 @@ public class Main {
                 if (client.getBalance() >= room.getPrice() * days) {
                     if (room.getLivingClientsCount() < 6) {
                         System.out.println("Место в комнате забронировано на ваше имя.");
+                        formCheck(room.getPrice() * days, client);
                         room.setLivingClientsCount(room.getLivingClientsCount() + 1);
                         if (room.getLivingClientsCount() == 6) {
                             room.setBooked(true);
@@ -232,7 +252,7 @@ public class Main {
                             availableRooms.remove(room);
                             availableRoomNums.remove(roomNum);
                             bookedRooms.add(room);
-                            writeBookedRooms("bookedRooms.txt", bookedRooms);
+                            writeBookedRooms("actualBooking.txt", bookedRooms);
                         }
                     } else {
                         System.out.println("Все места в этой комнате уже заняты");
@@ -285,7 +305,7 @@ public class Main {
         return LocalDate.of(2021, 6, 1);
     }
 
-    static void findBookedRoomsByClient() throws IOException, ClassNotFoundException {
+    static void findBookedRoomsByClient(LocalDate currentDate) throws IOException, ClassNotFoundException {
         Scanner sc = new Scanner(System.in);
         System.out.print("Введите вашу фамилию: ");
         String surname = sc.nextLine();
@@ -295,7 +315,7 @@ public class Main {
             if (client.getSurname().equals(surname) && client.getPassport().getNumber() == num) {
 
                 ArrayList<Room> bookedRoomsByClient = client.getBookedRooms();
-                ArrayList<Room> bookedRooms = readBookedRooms("bookedRooms.txt");
+                ArrayList<Room> bookedRooms = readBookedRooms("actualBooking.txt");
                 ArrayList<Integer> bookedRoomsNums = new ArrayList<Integer>();
 
                 for (Room bookedRoom : bookedRoomsByClient) {
@@ -309,16 +329,7 @@ public class Main {
 
                 switch (chooseWhatToDo("продлить", "отменить")) {
                     case "отменить":
-                        System.out.print("Введите номер комнаты, бронь которой вы хотите отменить: ");
-                        int roomNum = askForValidRoomNum(bookedRoomsNums);
-                        for (Room room : bookedRoomsByClient) {
-                            if (room.getId() == roomNum - 1) {
-                                bookedRooms.remove(room);
-                                writeLog(String.format("%s отменил бронь на комнату номер %d", client.getName(), room.getId() + 1));
-                                client.setBookedRooms(bookedRoomsByClient);
-                            }
-                        }
-                        writeBookedRooms("bookedRooms.txt", bookedRooms);
+                        cancel(bookedRoomsByClient, bookedRooms, bookedRoomsNums, client, currentDate);
                         return;
                     case "продлить":
                         break;
@@ -330,6 +341,26 @@ public class Main {
             }
         }
         System.out.println("Брони на ваше имя не найдено!");
+    }
+
+    static void cancel(ArrayList<Room> bookedRoomsByClient, ArrayList<Room> bookedRooms,
+                       ArrayList<Integer> bookedRoomsNums, Client client, LocalDate currentDate) throws IOException {
+        System.out.print("Введите номер комнаты, бронь которой вы хотите отменить: ");
+        int roomNum = askForValidRoomNum(bookedRoomsNums);
+        for (Room room : bookedRoomsByClient) {
+
+            if (room.getId() == roomNum - 1) {
+                if (Period.between(room.getEnteringDate(), room.getExitDate()).getDays() <= 3) {
+                    bookedRooms.remove(room);
+                    writeLog(String.format("%s отменил бронь на комнату номер %d", client.getName(), room.getId() + 1));
+                    client.setBookedRooms(bookedRoomsByClient);
+                } else {
+                    System.out.println("Бронь можно отменить только в течение трех дней.");
+                }
+
+            }
+        }
+        writeBookedRooms("actualBooking.txt", bookedRooms);
     }
 
     static LocalDate[] askForValidDate() {
@@ -407,7 +438,7 @@ public class Main {
     // поиск свободных комнат
     static ArrayList<Room> findAvailableRooms() {
         ArrayList<Room> allRooms = readBookedRooms("existingRooms.txt");
-        ArrayList<Room> bookedRooms = readBookedRooms("bookedRooms.txt");
+        ArrayList<Room> bookedRooms = readBookedRooms("actualBooking.txt");
         for (Room room : allRooms) {
         }
         return allRooms;
@@ -509,7 +540,7 @@ public class Main {
     }
 
     static void writeLog(String message) throws IOException {
-        
+
         PrintWriter pw = null;
         BufferedReader br = null;
         try {
@@ -535,4 +566,18 @@ public class Main {
             }
         }
     }
+
+    static void formCheck(int price, Client client) {
+        PrintWriter printWriter = null;
+        try {
+            printWriter = new PrintWriter(String.format("Check for %s %s %s.txt", client.getSurname(),
+                    client.getName(), client.getLastname()));
+            printWriter.print(String.format("--Кассовый чек--\nИмя: %s\nФамилия: %s\nОтчество: %s\nОплачено: %d",
+                    client.getName(), client.getSurname(), client.getLastname(), price));
+        } catch (FileNotFoundException fileNotFoundException) {
+            System.out.println("Файл не найден");
+        }
+    }
+
+
 }
